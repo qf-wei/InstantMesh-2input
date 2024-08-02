@@ -16,18 +16,17 @@ data:
     train:
       target: src.data.objaverse_zero123plus.ObjaverseData
       params:
-        root_dir: data/objaverse
-        meta_fname: lvis-annotations.json
+        root_dir: data
+        meta_fname: views.json
         image_dir: rendering_zero123plus
         validation: false
     validation:
       target: src.data.objaverse_zero123plus.ObjaverseData
       params:
-        root_dir: data/objaverse
-        meta_fname: lvis-annotations.json
+        root_dir: data
+        meta_fname: views.json
         image_dir: rendering_zero123plus
         validation: true
-
 
 lightning:
   modelcheckpoint:
@@ -44,4 +43,4 @@ lightning:
     val_check_interval: 1000
     num_sanity_val_steps: 0
     accumulate_grad_batches: 1
-    check_val_every_n_epoch: null   # if not set this, validation does not run
+    check_val_every_n_epoch: null # if not set this, validation does not run

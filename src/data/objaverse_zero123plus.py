@@ -122,7 +122,7 @@ class ObjaverseData(Dataset):
 
             img_list = []
             try:
-                for idx in range(7):
+                for idx in range(8):
                     img, alpha = self.load_im(
                         os.path.join(image_path, "%03d.png" % idx), bkg_color
                     )
@@ -138,7 +138,7 @@ class ObjaverseData(Dataset):
         imgs = torch.stack(img_list, dim=0).float()
 
         data = {
-            "cond_imgs": imgs[0, 1],  # (2, 3, H, W)
-            "target_imgs": imgs[2:],  # (6, 3, H, W)
+            "cond_imgs": imgs[0:2],  # (2, 3, H, W)
+            "target_imgs": imgs[2:8],  # (6, 3, H, W)
         }
         return data
