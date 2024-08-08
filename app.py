@@ -147,6 +147,9 @@ def check_input_image(input_image, input_image2):
 
 def preprocess(input_image, input_image2, do_remove_background):
     rembg_session = rembg.new_session() if do_remove_background else None
+    # resize the input image to 256 while keeping the aspect ratio using pil
+    input_image = input_image.resize((256, 256))
+    input_image2 = input_image2.resize((256, 256))
     if do_remove_background:
         input_image = remove_background(input_image, rembg_session)
         input_image = resize_foreground(input_image, 0.85)
@@ -166,6 +169,9 @@ def generate_mvs(input_image, input_image2, sample_steps, sample_seed):
     )
     combined_image.paste(input_image, (0, 0))
     combined_image.paste(input_image2, (input_image.width, 0))
+    # save the combined image
+    combined_image.save("combined_image.png")
+    print(combined_image.size)
 
     # sampling
     generator = torch.Generator(device=device0)
