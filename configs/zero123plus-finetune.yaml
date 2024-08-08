@@ -11,8 +11,8 @@ model:
 data:
   target: src.data.objaverse_zero123plus.DataModuleFromConfig
   params:
-    batch_size: 6
-    num_workers: 8
+    batch_size: 1
+    num_workers: 2
     train:
       target: src.data.objaverse_zero123plus.ObjaverseData
       params:
