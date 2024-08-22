@@ -165,10 +165,10 @@ def generate_mvs(input_image, input_image2, sample_steps, sample_seed):
 
     # put these 2 image in one row
     combined_image = Image.new(
-        "RGBA", (input_image.width + input_image2.width, input_image.height)
+        "RGBA", (input_image.width, input_image.height + input_image2.height)
     )
     combined_image.paste(input_image, (0, 0))
-    combined_image.paste(input_image2, (input_image.width, 0))
+    combined_image.paste(input_image2, (0, input_image.height))
     # save the combined image
     combined_image.save("combined_image.png")
     print(combined_image.size)
