@@ -5,7 +5,8 @@ import imageio
 import numpy as np
 import rembg
 import torch
-from diffusers import DiffusionPipeline, EulerAncestralDiscreteScheduler
+
+# from diffusers import DiffusionPipeline, EulerAncestralDiscreteScheduler
 from einops import rearrange
 from huggingface_hub import hf_hub_download
 from omegaconf import OmegaConf
@@ -91,31 +92,6 @@ IS_FLEXICUBES = True if config_name.startswith("instant-mesh") else False
 
 device = torch.device("cuda")
 
-# load diffusion model
-print("Loading diffusion model ...")
-pipeline = DiffusionPipeline.from_pretrained(
-    "sudo-ai/zero123plus-v1.2",
-    custom_pipeline="zero123plus",
-    torch_dtype=torch.float16,
-    cache_dir=model_cache_dir,
-)
-pipeline.scheduler = EulerAncestralDiscreteScheduler.from_config(
-    pipeline.scheduler.config, timestep_spacing="trailing"
-)
-
-# load custom white-background UNet
-# unet_ckpt_path = hf_hub_download(
-#     repo_id="TencentARC/InstantMesh",
-#     filename="diffusion_pytorch_model.bin",
-#     repo_type="model",
-#     cache_dir=model_cache_dir,
-# )
-unet_ckpt_path = "zero123plus-finetune-63000.pth"
-state_dict = torch.load(unet_ckpt_path, map_location="cpu")
-pipeline.unet.load_state_dict(state_dict, strict=True)
-
-pipeline = pipeline.to(device0)
-
 # load reconstruction model
 print("Loading reconstruction model ...")
 model_ckpt_path = hf_hub_download(
@@ -142,7 +118,7 @@ print("Loading Finished!")
 
 
 def check_input_image(input_image, input_image2):
-    if input_image is None or input_image2 is None:
+    if input_image is None:
         raise gr.Error("No image uploaded!")
 
 
@@ -216,8 +192,39 @@ def make_mesh(mesh_fpath, planes):
     return mesh_fpath, mesh_glb_fpath
 
 
+def rgba_to_rgb(image):
+    """
+    Convert an RGBA image to RGB, replacing transparent pixels (alpha=0) with white.
+
+    Parameters:
+    image (numpy.ndarray): The input RGBA image as a NumPy array with shape (height, width, 4).
+
+    Returns:
+    numpy.ndarray: The output RGB image as a NumPy array with shape (height, width, 3).
+    """
+    # Separate the RGBA channels
+    r, g, b, a = image[:, :, 0], image[:, :, 1], image[:, :, 2], image[:, :, 3]
+
+    # Normalize alpha to [0, 1] range
+    alpha_factor = a / 255.0
+
+    # Create a white background (255, 255, 255)
+    white_background = np.ones_like(image[:, :, :3]) * 255
+
+    # Blend the image with the white background based on alpha
+    rgb_image = (1 - alpha_factor[:, :, np.newaxis]) * white_background + (
+        alpha_factor[:, :, np.newaxis]
+    ) * image[:, :, :3]
+
+    # Convert to uint8 and return
+
+    return rgb_image.astype(np.uint8)
+
+
 def make3d(images):
     images = np.asarray(images, dtype=np.float32) / 255.0
+    print(images.shape)
+    images = images[:, :, 0:3]  # remove alpha channel
     images = (
         torch.from_numpy(images).permute(2, 0, 1).contiguous().float()
     )  # (3, 960, 640)
@@ -331,67 +338,10 @@ with gr.Blocks() as demo:
                     type="pil",
                     elem_id="content_image",
                 )
-                input_image2 = gr.Image(
-                    label="Input Image2",
-                    image_mode="RGBA",
-                    sources="upload",
-                    width=256,
-                    height=256,
-                    type="pil",
-                    elem_id="content_image2",
-                )
-            with gr.Row():
-                processed_image = gr.Image(
-                    label="Processed Image",
-                    image_mode="RGBA",
-                    width=256,
-                    height=256,
-                    type="pil",
-                    interactive=False,
-                )
-                processed_image2 = gr.Image(
-                    label="Processed Image2",
-                    image_mode="RGBA",
-                    width=256,
-                    height=256,
-                    type="pil",
-                    interactive=False,
-                )
-            with gr.Row():
-                with gr.Group():
-                    do_remove_background = gr.Checkbox(
-                        label="Remove Background", value=True
-                    )
-                    sample_seed = gr.Number(value=42, label="Seed Value", precision=0)
-
-                    sample_steps = gr.Slider(
-                        label="Sample Steps", minimum=30, maximum=75, value=75, step=5
-                    )
-
             with gr.Row():
                 submit = gr.Button("Generate", elem_id="generate", variant="primary")
-
-            with gr.Row(variant="panel"):
-                gr.Examples(
-                    examples=[
-                        os.path.join("examples", img_name)
-                        for img_name in sorted(os.listdir("examples"))
-                    ],
-                    inputs=[input_image],
-                    label="Examples",
-                    examples_per_page=20,
-                )
-
         with gr.Column():
             with gr.Row():
-                with gr.Column():
-                    mv_show_images = gr.Image(
-                        label="Generated Multi-views",
-                        type="pil",
-                        width=379,
-                        interactive=False,
-                    )
-
                 with gr.Column():
                     output_video = gr.Video(
                         label="video",
@@ -429,17 +379,9 @@ with gr.Blocks() as demo:
     gr.Markdown(_CITE_)
     mv_images = gr.State()
 
-    submit.click(fn=check_input_image, inputs=[input_image, input_image2]).success(
-        fn=preprocess,
-        inputs=[input_image, input_image2, do_remove_background],
-        outputs=[processed_image, processed_image2],
-    ).success(
-        fn=generate_mvs,
-        inputs=[processed_image, processed_image2, sample_steps, sample_seed],
-        outputs=[mv_images, mv_show_images],
-    ).success(
+    submit.click(fn=check_input_image, inputs=[input_image]).success(
         fn=make3d,
-        inputs=[mv_images],
+        inputs=[input_image],
         outputs=[output_video, output_model_obj, output_model_glb],
     )
 
