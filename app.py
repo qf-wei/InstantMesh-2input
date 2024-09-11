@@ -13,6 +13,7 @@ from PIL import Image
 from pytorch_lightning import seed_everything
 from torchvision.transforms import v2
 from tqdm import tqdm
+from vol_infer import infer_volumes
 
 from src.utils.camera_util import (
     FOV_to_intrinsics,
@@ -454,6 +455,11 @@ with gr.Blocks() as demo:
                     )
 
             with gr.Row():
+                float_display = gr.Number(
+                    label="Volume", value=0.0, precision=4, interactive=False
+                )
+
+            with gr.Row():
                 gr.Markdown(
                     """Try a different <b>seed value</b> if the result is unsatisfying (Default: 42)."""
                 )
@@ -473,7 +479,7 @@ with gr.Blocks() as demo:
         fn=make3d,
         inputs=[mv_images],
         outputs=[output_video, output_model_obj, output_model_glb],
-    )
+    ).success(fn=infer_volumes, inputs=[output_model_glb], outputs=[float_display])
 
 demo.queue(max_size=10)
 demo.launch(server_name="0.0.0.0", server_port=43839)
