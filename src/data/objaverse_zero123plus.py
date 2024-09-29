@@ -103,7 +103,8 @@ class ObjaverseData(Dataset):
         return len(self.paths)
 
     def load_im(self, path, color):
-        pil_img = Image.open(path)
+        #open img as rgb
+        pil_img = Image.open(path).convert("RGBA")
 
         image = np.asarray(pil_img, dtype=np.float32) / 255.0
         alpha = image[:, :, 3:]
@@ -122,6 +123,10 @@ class ObjaverseData(Dataset):
 
             img_list = []
             try:
+                img, alpha = self.load_im(
+                        os.path.join(image_path, "000_d0001normalized.png"), bkg_color
+                    )
+                img_list.append(img)
                 for idx in range(8):
                     img, alpha = self.load_im(
                         os.path.join(image_path, "%03d.png" % idx), bkg_color
@@ -134,11 +139,10 @@ class ObjaverseData(Dataset):
                 continue
 
             break
-
         imgs = torch.stack(img_list, dim=0).float()
 
         data = {
             "cond_imgs": imgs[0:2],  # (2, 3, H, W)
-            "target_imgs": imgs[2:8],  # (6, 3, H, W)
+            "target_imgs": imgs[3:9],  # (6, 3, H, W)
         }
         return data

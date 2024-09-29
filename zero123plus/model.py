@@ -15,6 +15,7 @@ from torchvision.transforms import v2
 from torchvision.utils import make_grid, save_image
 
 from .pipeline import RefOnlyNoisedUNet
+from PIL import Image   
 
 
 def scale_latents(latents):
@@ -125,6 +126,34 @@ class MVDiffusion(pl.LightningModule):
         cond_imgs = rearrange(cond_imgs, "b (x y) c h w -> b c (x h) (y w)", x=2, y=1)
         cond_imgs = cond_imgs.to(self.device)
 
+        """
+        def save_as_png(tensor_imgs, save_dir="output_images"):
+            #Save each tensor image as a PNG file.
+            # Ensure save directory exists
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+
+            # Move the tensor back to CPU if needed, and make sure it's detached from the computation graph
+            tensor_imgs = tensor_imgs.cpu().detach()
+
+            # Normalize or scale the tensor to 0-255 if necessary, and convert to uint8
+            # Assuming the tensor values are in [0, 1] for normalized images
+            tensor_imgs = (tensor_imgs * 255).clamp(0, 255).byte()
+
+            # Iterate over each image in the batch
+            for i, img_tensor in enumerate(tensor_imgs):
+                # Convert from (C, H, W) to (H, W, C)
+                img_tensor = img_tensor.permute(1, 2, 0).numpy()
+
+                # Convert to a PIL Image and save as PNG
+                img = Image.fromarray(img_tensor)
+                img.save(os.path.join(save_dir, f"image1_{i}.png"))
+
+        # Save the rearranged images to PNG
+        save_as_png(cond_imgs)
+        #print(cond_imgs.shape)
+        """
+
         target_imgs = batch["target_imgs"]  # (B, 6, C, H, W)
         target_imgs = v2.functional.resize(
             target_imgs, 320, interpolation=3, antialias=True
@@ -133,6 +162,33 @@ class MVDiffusion(pl.LightningModule):
             target_imgs, "b (x y) c h w -> b c (x h) (y w)", x=3, y=2
         )  # (B, C, 3H, 2W)
         target_imgs = target_imgs.to(self.device)
+
+        """
+        def save_as_png(tensor_imgs, save_dir="output_images"):
+            #Save each tensor image as a PNG file.
+            # Ensure save directory exists
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+
+            # Move the tensor back to CPU if needed, and make sure it's detached from the computation graph
+            tensor_imgs = tensor_imgs.cpu().detach()
+
+            # Normalize or scale the tensor to 0-255 if necessary, and convert to uint8
+            # Assuming the tensor values are in [0, 1] for normalized images
+            tensor_imgs = (tensor_imgs * 255).clamp(0, 255).byte()
+
+            # Iterate over each image in the batch
+            for i, img_tensor in enumerate(tensor_imgs):
+                # Convert from (C, H, W) to (H, W, C)
+                img_tensor = img_tensor.permute(1, 2, 0).numpy()
+
+                # Convert to a PIL Image and save as PNG
+                img = Image.fromarray(img_tensor)
+                img.save(os.path.join(save_dir, f"image_{i}.png"))
+
+        # Save the rearranged images to PNG
+        save_as_png(target_imgs)
+        """
 
         return cond_imgs, target_imgs
 
